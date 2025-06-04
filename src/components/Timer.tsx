@@ -1,32 +1,23 @@
-import React, { useEffect } from 'react';
+import React from "react";
 
 interface TimerProps {
-  seconds: number;
-  onTimeUp: () => void;
-  isActive: boolean;
+  timeLeft: number;
 }
 
-const Timer: React.FC<TimerProps> = ({ seconds, onTimeUp, isActive }) => {
-  useEffect(() => {
-    if (!isActive) return;
-    
-    if (seconds <= 0) {
-      onTimeUp();
-      return;
-    }
-
-    const timer = setInterval(() => {
-      onTimeUp();
-    }, seconds * 1000);
-
-    return () => clearInterval(timer);
-  }, [seconds, onTimeUp, isActive]);
-
+const Timer: React.FC<TimerProps> = ({ timeLeft }) => {
+  // Optionally, you can style a progress bar behind the number:
   return (
-    <div className="absolute top-4 left-4 flex items-center justify-center">
-      <div className="font-mono text-xl font-medium text-gray-600">
-        {seconds}s
+    <div className="w-full max-w-md mt-4">
+      <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="absolute top-0 left-0 bg-indigo-600 h-full transition-all duration-300"
+          style={{ width: `${(timeLeft / 10) * 100}%` }}
+          /* If your max duration is 10 seconds; you can parametrize this */
+        />
       </div>
+      <p className="mt-1 text-center text-lg font-semibold text-gray-700">
+        Time Left: {timeLeft}s
+      </p>
     </div>
   );
 };

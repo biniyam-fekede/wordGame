@@ -1,105 +1,151 @@
-import React, { useState, useEffect } from 'react';
-import PromptDisplay from './PromptDisplay';
-import InputBox from './InputBox';
-import Timer from './Timer';
-import ScoreBoard from './ScoreBoard';
-import GameSettings from './GameSettings';
-import { generatePrompt, validateWord } from '../utils/gameUtils';
-import { GameState } from '../types';
+// src/components/GameContainer.tsx
+import React, { useState, useEffect, useCallback } from "react";
+import GameSettings from "./GameSettings";
+import PromptDisplay from "./PromptDisplay";
+import InputBox from "./InputBox";
+import Timer from "./Timer";
+import ScoreBoard from "./ScoreBoard";
+import { useWordList } from "../hooks/useWordList";
+
+// (If you already have some utilities for random prompt, keep them; we'll focus on validation.)
 
 const GameContainer: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState>('playing');
-  const [prompt, setPrompt] = useState<string>('');
-  const [score, setScore] = useState<number>(0);
-  const [timerDuration, setTimerDuration] = useState<number>(10);
-  const [currentTime, setCurrentTime] = useState<number>(10);
-  const [feedback, setFeedback] = useState<{ word: string; isValid: boolean } | null>(null);
+  // 1) Game state:
+  const [score, setScore] = useState(0);
+  const [prompt, setPrompt] = useState(""); // current prompt text
+  const [feedback, setFeedback] = useState<{
+    word: string;
+    isValid: boolean;
+  } | null>(null);
+  const [gameState, setGameState] = useState<"idle" | "playing" | "roundOver">(
+    "idle"
+  );
+  const [timeLeft, setTimeLeft] = useState(10); // e.g., default 10s
+  const [duration, setDuration] = useState(10); // chosen in GameSettings
 
-  const generateNewPrompt = () => {
-    setPrompt(generatePrompt());
-  };
+  // 2) Load the word list (10–20MB or however big):
+  //    NOTE: '/words.csv' must be in your /public folder.
+  const { words, wordSet } = useWordList("/words.csv");
 
-  const startGame = (duration: number) => {
-    setTimerDuration(duration);
-    setCurrentTime(duration);
-    setScore(0);
-    setFeedback(null);
-    generateNewPrompt();
-    setGameState('playing');
-  };
+  // 3) Handler for when the player submits something:
+  const handleSubmitWord = useCallback(
+    (candidate: string) => {
+      const normalized = candidate.trim().toLowerCase();
+      if (!normalized) return;
 
-  const startNewRound = () => {
-    setCurrentTime(timerDuration);
-    setFeedback(null);
-    generateNewPrompt();
-    setGameState('playing');
-  };
+      // Check the word against the dictionary:
+      const isValidWord = wordSet.has(normalized);
 
-  const handleSubmitWord = (word: string) => {
-    if (gameState !== 'playing') return;
-    
-    const isValid = validateWord(word.trim(), prompt);
-    
-    setFeedback({
-      word: word.trim(),
-      isValid
-    });
-    
-    if (isValid) {
-      setScore(prev => prev + 1);
-    }
-    
-    setGameState('roundOver');
-    
-    setTimeout(() => {
-      startNewRound();
-    }, 1500);
-  };
+      if (isValidWord) {
+        // Award a point, show positive feedback, generate a new prompt
+        setScore((prev) => prev + 1);
+        setFeedback({ word: normalized, isValid: true });
+        // Next prompt could be random from word list, or some logic you already have:
+        // e.g. setPrompt(pickRandomPrompt());
+      } else {
+        // Show negative feedback, but keep current prompt
+        setFeedback({ word: normalized, isValid: false });
+      }
 
-  const handleTimeUp = () => {
-    if (gameState !== 'playing') return;
-    setGameState('roundOver');
-    
-    setFeedback({
-      word: 'Time up!',
-      isValid: false
-    });
-    
-    setTimeout(() => {
-      startNewRound();
-    }, 1500);
-  };
+      // Clear feedback after a brief delay so it fades out
+      setTimeout(() => setFeedback(null), 800);
 
+      // Optionally, reset the input field or timer,
+      // depending on how you want the flow to work:
+      // (Your InputBox already clears its own state on submit.)
+    },
+    [wordSet]
+  );
+
+  // 4) Timer logic: start countdown when game starts, etc.
   useEffect(() => {
-    generateNewPrompt();
-  }, []);
+    let intervalId: NodeJS.Timeout;
+
+    if (gameState === "playing") {
+      intervalId = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(intervalId);
+            setGameState("roundOver");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => clearInterval(intervalId);
+  }, [gameState]);
+
+  // 5) When round ends, reset as needed:
+  useEffect(() => {
+    if (gameState === "roundOver") {
+      // e.g. Show a “Round Over” UI for 1 second, then restart
+      const timeout = setTimeout(() => {
+        setGameState("idle");
+        setTimeLeft(duration);
+        setPrompt(""); // or generate new prompt
+        setScore(0); // if you want a fresh start each round
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
+  }, [gameState, duration]);
+
+  // 6) Helper to begin a new round:
+  const startRound = () => {
+    // Pick an initial prompt however you like (maybe a random short word)
+    // For example, pick a 3-letter word from the dictionary:
+    const randomSeed =
+      words.length > 0
+        ? words[Math.floor(Math.random() * words.length)].slice(0, 3)
+        : "a";
+
+    setPrompt(randomSeed);
+    setScore(0);
+    setTimeLeft(duration);
+    setGameState("playing");
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 flex flex-col items-center justify-center relative">
-      <div className="absolute top-4 right-4">
-        <GameSettings onStartGame={startGame} currentDuration={timerDuration} />
-      </div>
-      
-      <div className="max-w-3xl w-full bg-white rounded-xl shadow-sm border border-gray-100 p-8 relative">
-        <Timer 
-          seconds={currentTime} 
-          onTimeUp={handleTimeUp} 
-          isActive={gameState === 'playing'} 
-        />
-        
-        <PromptDisplay prompt={prompt} />
-        
-        <div className="flex flex-col items-center justify-center">
-          <InputBox 
-            onSubmit={handleSubmitWord} 
-            isDisabled={gameState === 'roundOver'} 
-            gameState={gameState}
-            prompt={prompt}
-          />
-          
-          <ScoreBoard score={score} feedback={feedback} />
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
+      {/* ❶ Game Settings: choose duration (passed down via props) */}
+      <GameSettings
+        duration={duration}
+        onChange={(newDuration) => {
+          setDuration(newDuration);
+          setTimeLeft(newDuration);
+        }}
+        disabled={gameState === "playing"}
+      />
+
+      {/* ❷ Timer: show countdown */}
+      <Timer timeLeft={timeLeft} />
+
+      {/* ❸ Prompt: show the current word/seed */}
+      <PromptDisplay prompt={prompt} />
+
+      {/* ❹ InputBox: user types; we pass in handleSubmitWord + gameState + feedback */}
+      <InputBox
+        prompt={prompt}
+        onSubmit={(word) => {
+          handleSubmitWord(word);
+        }}
+        isDisabled={gameState !== "playing"}
+        gameState={gameState}
+      />
+
+      {/* ❺ ScoreBoard: show current score + feedback */}
+      <ScoreBoard score={score} feedback={feedback} />
+
+      {/* ❻ Start / Restart button when idle or roundOver */}
+      {(gameState === "idle" || gameState === "roundOver") && (
+        <button
+          onClick={startRound}
+          className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition"
+        >
+          {gameState === "idle" ? "Start Game" : "Play Again"}
+        </button>
+      )}
     </div>
   );
 };

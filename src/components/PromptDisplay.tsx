@@ -1,3 +1,4 @@
+// src/components/PromptDisplay.tsx
 import React from "react";
 
 interface PromptDisplayProps {
@@ -6,11 +7,8 @@ interface PromptDisplayProps {
 
 const PromptDisplay: React.FC<PromptDisplayProps> = ({ prompt }) => {
   return (
-    <div className="text-center mb-8">
-      <h2 className="text-gray-500 text-sm font-medium mb-2">
-        {" "}
-        Type any word starting with these letters
-      </h2>
+    <div className="mt-8 mb-4 text-center">
+      <p className="text-3xl font-bold text-indigo-600">{prompt}</p>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+// src/components/InputBox.tsx
 import React, { useState, useRef, useEffect } from "react";
 
 interface InputBoxProps {
@@ -16,16 +17,17 @@ const InputBox: React.FC<InputBoxProps> = ({
   const [input, setInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Autofocus when gameState is ‘playing’
   useEffect(() => {
-    if (gameState === "playing" && !isDisabled && inputRef.current) {
-      inputRef.current.focus();
+    if (gameState === "playing" && !isDisabled) {
+      inputRef.current?.focus();
     }
-
     if (gameState === "roundOver") {
       setInput("");
     }
   }, [gameState, isDisabled]);
 
+  // Pre-fill with prompt (if you want them to “continue” from it)
   useEffect(() => {
     setInput(prompt.toLowerCase());
     if (inputRef.current) {
@@ -37,9 +39,8 @@ const InputBox: React.FC<InputBoxProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isDisabled) return;
-
     onSubmit(input);
-    setInput("");
+    setInput(""); // clear after submit
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -49,7 +50,7 @@ const InputBox: React.FC<InputBoxProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-md">
+    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
       <div className="relative">
         <input
           ref={inputRef}
@@ -62,13 +63,15 @@ const InputBox: React.FC<InputBoxProps> = ({
           autoComplete="off"
           autoCapitalize="off"
           className={`
-            w-full px-6 py-4 text-2xl font-medium rounded-lg border
-            focus:outline-none focus:ring-1 focus:ring-gray-300
-            transition duration-200 ease-in-out
+            w-full px-6 py-4 text-2xl font-medium rounded-xl border-2
+            bg-gradient-to-tr from-gray-50 to-white shadow-lg
+            placeholder-gray-400 placeholder-opacity-70 italic
+            focus:outline-none focus:ring-4 focus:ring-indigo-200
+            transition duration-300 ease-in-out
             ${
               isDisabled
-                ? "bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-gray-200 focus:border-gray-300"
+                ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                : "border-transparent focus:border-indigo-500"
             }
           `}
           placeholder="Continue typing..."
@@ -80,16 +83,30 @@ const InputBox: React.FC<InputBoxProps> = ({
           }
           className={`
             absolute right-2 top-1/2 transform -translate-y-1/2
-            px-4 py-2 rounded-md text-white font-medium
-            transition duration-200 ease-in-out
+            px-5 py-3 rounded-xl text-white font-semibold flex items-center space-x-2
+            transition duration-300 ease-in-out shadow-md
             ${
               isDisabled || !input.trim() || input.length <= prompt.length
-                ? "bg-gray-200 cursor-not-allowed"
-                : "bg-gray-700 hover:bg-gray-800"
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-purple-600 hover:to-indigo-500"
             }
           `}
         >
-          Submit
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span>Submit</span>
         </button>
       </div>
     </form>
