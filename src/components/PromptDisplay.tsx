@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface PromptDisplayProps {
   prompt: string;
@@ -7,7 +7,10 @@ interface PromptDisplayProps {
 const PromptDisplay: React.FC<PromptDisplayProps> = ({ prompt }) => {
   return (
     <div className="text-center mb-8">
-      <h2 className="text-gray-500 text-sm font-medium mb-2">Type a word starting with these letters</h2>
+      <h2 className="text-gray-500 text-sm font-medium mb-2">
+        {" "}
+        Type any word starting with these letters
+      </h2>
     </div>
   );
 };
